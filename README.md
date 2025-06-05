@@ -16,7 +16,7 @@ Assicurarsi che il Makefile includa i percorsi corretti per la libreria cgraph.
 ## Struttura della directory
 La directory contiene:
 - automated_test.sh: [vedi utilizzo qui](#compilazione-e-test)
-- cgraph.pdf: tutorial della libreria cgraph reperibile da [qui][https://graphviz.org/pdf/cgraph.pdf]
+- cgraph.pdf: tutorial della libreria cgraph reperibile da [qui](https://graphviz.org/pdf/cgraph.pdf)
 - estimate_algorithm.c: il file sorgente dell'algoritmo
 - grafo_enorme.dot: file di input per effettuare i test più onerosi.
 - grafo.dot: file di input per effettuare i primi test.
@@ -124,7 +124,7 @@ Per lanciare lo script eseguire il seguente comando all'interno della directory:
 ./automated_test.sh 
 ```
 ## Documentazione delle funzioni cgraph utilizzate
-Di seguito riporto tutte le funzioni utilizzate della libreria cgraph, con il prototipo e il funzionamento di queste, il file cgraph.pdf contiene il tutorial con esempi pratici delle funzioni in questione, le informazioni sui prototipi sono reperibili [qui][https://graphviz.org/pdf/cgraph.3.pdf] e riassunte, la dicitura 'Equivalente a: <funzione>' indica come io l'ho utilizzata nel programma.
+Di seguito riporto tutte le funzioni utilizzate della libreria cgraph, con il prototipo e il funzionamento di queste, il file cgraph.pdf contiene il tutorial con esempi pratici delle funzioni in questione, le informazioni sui prototipi sono reperibili [qui](https://graphviz.org/pdf/cgraph.3.pdf) e riassunte, la dicitura 'Equivalente a: <funzione>' indica come io l'ho utilizzata nel programma.
 
 ```c
 /**
