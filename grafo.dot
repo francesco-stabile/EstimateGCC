@@ -1,0 +1,23 @@
+graph grafo {
+A -- B;
+B -- C;
+C -- A;
+D;
+E -- F;
+E -- G;
+E -- O;
+F -- G;
+G -- H;
+G -- L;
+G -- I;
+G -- M;
+I -- M;
+L -- I;
+I -- F;
+P -- Q;
+P -- S;
+Q -- R;
+Z;
+T;
+CIAO -- BENE;
+}
