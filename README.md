@@ -1,10 +1,65 @@
 # Algoritmo per la stima del numero di componenti connesse in un grafo
 
-L'algoritmo affronta il problema della stima del numero di componenti connesse in un grafo.
+L'algoritmo affronta il problema della stima del numero di componenti connesse in un grafo.  
+L'obiettivo è avere un algoritmo che opera in tempo sublineare.
+
+Vogliamo stimare il numero di componenti connesse $C$ con due parametri $0 < \epsilon < 1$ e $0 < \delta < 1$  
+tale che $P(|\widetilde{C} - C| \leq \epsilon n ) \geq 1 - \delta$ dove $C$ è il vero numero di componenti connesse del grafo $G$.
+
+La strategia è ridurre il calcolo a una somma: per ogni vertice $v$ nel grafo, sia $s_{v}$ la dimensione della sua componente connessa, allora:
+
+$$
+C = \sum_{v \in V} \frac{1}{s_{v}}
+$$
+
+Poiché calcolare $s_{v}$ è particolarmente costoso se questo è grande, l'idea è stimare la somma di cui sopra campionando un sottoinsieme di vertici $V'$.
+
+Definiamo $s_{v'} = \min(s_{v}, \frac{2}{\epsilon})$ per tutti i $v \in V'$ e $C' = \sum_{v \in V} \frac{1}{s_{v'}}$, allora:
+
+$$
+|C - C'| \leq \frac{\epsilon}{2} \cdot n
+$$
+
+In pratica calcoliamo $s_{v'}$ ottenendo comunque una buona stima di $C$. Il calcolo di $s_{v'}$ avviene facendo una ricerca BFS/DFS, iniziando dal vertice $v$ e terminando non appena più di $\frac{2}{\epsilon}$ vertici vengono visitati.
+
+## Pseudocodice dell'algoritmo
+
+1. $k = \frac{2}{\epsilon^2} \ln(\frac{2}{\delta})$
+2. For $i = 1$ to $k$:
+   - Campioniamo un vertice $v_{i}$ in maniera uniforme con rimpiazzamento
+   - Calcoliamo $X_{i} = \frac{1}{s'_{v_{i}}}$ tramite BFS/DFS da $v_{i}$, troncando dopo aver visitato al massimo $\frac{2}{\epsilon}$ vertici
+3. Restituiamo $\widetilde{C} = \frac{n}{k} \cdot \sum_{i=1}^k X_{i}$
+
+Con questo algoritmo abbiamo:
+- $\mathbb{E}[\widetilde{C}] = C'$
+- $P(|\widetilde{C} - C'| \leq \frac{\epsilon}{2} \cdot n) \geq 1 - \delta$
+
+Sfruttando la disuguaglianza triangolare otteniamo con probabilità $1 - \delta$:
+
+$$
+|\widetilde{C} - C| \leq |\widetilde{C} - C'| + |C' - C| \leq \frac{\epsilon}{2} \cdot n + \frac{\epsilon}{2} \cdot n = \epsilon \cdot n
+$$
+
+Con una complessità al runtime pari a $O(\frac{1}{\epsilon^{4}} \cdot \ln(\frac{1}{\delta}))$.
+
+## Caratteristiche del programma
+
 Il programma offre due strategie di ricerca:
 
 - **BFS (Breadth-First Search)**: Implementata con coda FIFO
 - **DFS (Depth-First Search)**: Implementata con pila LIFO
+
+Prende in ingresso, da linea di comando, 3 parametri obbligatori ed un parametro opzionale.  
+Ecco la sintassi del programma:
+
+```bash
+./estimate_algorithm <ε> <δ> <input.dot> [BFS|DFS]
+```
+dove
+- **ε∈(0,1)**, indica l'errore di approssimazione.
+- **δ∈(0,1)**, la probabilità di fallimento.
+- **input.dot**, il file contente il grafo.
+- **[BFS/DFS]**, il tipo di ricerca da eseguire, se non specificato, l'algoritmo verrà eseguito con ricerca BFS.
 
 ## Prerequisiti e installazione
 L'algoritmo utilizza la libreria **cgraph** di Graphviz. Per installarla:
