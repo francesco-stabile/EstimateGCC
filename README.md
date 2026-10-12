@@ -1,5 +1,298 @@
 # Algoritmo per la stima del numero di componenti connesse in un grafo
 
+📌 **Language / Lingua:**  
+🇬🇧 [English Version](#-english-version) | 🇮🇹 [Versione Italiana](#-versione-italiana)
+
+---
+
+## 🇬🇧 English Version
+
+# Algorithm for Estimating the Number of Connected Components in a Graph
+
+The algorithm addresses the problem of estimating the number of connected components in a graph.  
+The goal is to have an algorithm that operates in sublinear time.
+
+We want to estimate the number of connected components $C$ with two parameters $0 < \epsilon < 1$ and $0 < \delta < 1$  
+such that $P(|\widetilde{C} - C| \leq \epsilon n ) \geq 1 - \delta$ where $C$ is the true number of connected components of the graph $G$.
+
+The strategy is to reduce the calculation to a sum: for each vertex $v$ in the graph, let $s_{v}$ be the size of its connected component, then:
+
+$$
+C = \sum_{v \in V} \frac{1}{s_{v}}
+$$
+
+Since calculating $s_{v}$ is particularly expensive if it is large, the idea is to estimate the above sum by sampling a subset of vertices $V'$.
+
+We define $s_{v'} = \min(s_{v}, \frac{2}{\epsilon})$ for all $v \in V'$ and $C' = \sum_{v \in V} \frac{1}{s_{v'}}$, then:
+
+$$
+|C - C'| \leq \frac{\epsilon}{2} \cdot n
+$$
+
+In practice we calculate $s_{v'}$ obtaining a good estimate of $C$ anyway. The calculation of $s_{v'}$ is done by performing a BFS/DFS search, starting from vertex $v$ and ending as soon as more than $\frac{2}{\epsilon}$ vertices are visited.
+
+## Pseudocode of the Algorithm
+
+1. $k = \frac{2}{\epsilon^2} \ln(\frac{2}{\delta})$
+2. For $i = 1$ to $k$:
+   - We sample a vertex $v_{i}$ uniformly with replacement
+   - We calculate $X_{i} = \frac{1}{s'_{v_{i}}}$ via BFS/DFS from $v_{i}$, truncating after visiting at most $\frac{2}{\epsilon}$ vertices
+3. We return $\widetilde{C} = \frac{n}{k} \cdot \sum_{i=1}^k X_{i}$
+
+With this algorithm we have:
+- $\mathbb{E}[\widetilde{C}] = C'$
+- $P(|\widetilde{C} - C'| \leq \frac{\epsilon}{2} \cdot n) \geq 1 - \delta$
+
+By using the triangle inequality we obtain with probability $1 - \delta$:
+
+$$
+|\widetilde{C} - C| \leq |\widetilde{C} - C'| + |C' - C| \leq \frac{\epsilon}{2} \cdot n + \frac{\epsilon}{2} \cdot n = \epsilon \cdot n
+$$
+
+With a runtime complexity equal to $O(\frac{1}{\epsilon^{4}} \cdot \ln(\frac{1}{\delta}))$.
+
+## Program Characteristics
+
+The program offers two search strategies:
+
+- **BFS (Breadth-First Search)**: Implemented with FIFO queue
+- **DFS (Depth-First Search)**: Implemented with LIFO stack
+
+It takes as input, from the command line, 3 mandatory parameters and one optional parameter.  
+Here is the syntax of the program:
+
+```bash
+./estimate_algorithm <ε> <δ> <input.dot> [BFS|DFS]
+```
+where
+- **ε∈(0,1)**, indicates the approximation error.
+- **δ∈(0,1)**, the failure probability.
+- **input.dot**, the file containing the graph.
+- **[BFS/DFS]**, the type of search to execute, if not specified, the algorithm will be executed with BFS search.
+
+## Prerequisites and Installation
+The algorithm uses the **cgraph** library of Graphviz. To install it:
+```bash
+brew install graphviz
+```
+Ensure that the Makefile includes the correct paths for the cgraph library.
+
+## Directory Structure
+The directory contains:
+- automated_test.sh: [see usage here](#compilation-and-testing)
+- cgraph.pdf: tutorial of the cgraph library available from [here](https://graphviz.org/pdf/cgraph.pdf)
+- estimate_algorithm.c: the source file of the algorithm
+- grafo_enorme.dot: input file for performing the most demanding tests.
+- grafo.dot: input file for performing initial tests.
+- Makefile: file for automatic compilation [see usage here](#compilation-and-testing)
+
+## Implementation of Data Structures
+
+To manage the two data structures (FIFO and LIFO) I decided to define two structs, a struct QueueNode which contains the node and the next one, while the struct Queue which represents the actual structure, contains a QueueNode object pointing 'front' and one pointing 'rear', moreover it contains a boolean parameter (type) which can be FIFO or LIFO, from this parameter it is decided whether the structure will be respectively a queue or a stack. The idea is to use the dequeue function to always extract from the head, while enqueue depending on the type parameter defined in init_queue, will insert in the queue if FIFO was specified, at the head if LIFO was specified.
+
+```c
+typedef struct QueueNode {
+    Agnode_t* node;
+    struct QueueNode* next;
+} QueueNode;
+
+typedef struct {
+    QueueNode* front;
+    QueueNode* rear;
+    bool type;
+} Queue;
+
+void init_queue(Queue* q, bool type){
+    q->front = NULL;
+    q->rear = NULL;
+    q->type = type;
+}
+
+void enqueue(Queue* q, Agnode_t* node) {
+    QueueNode* newNode = malloc(sizeof(QueueNode));
+    newNode->node = node;
+    newNode->next = NULL;
+
+    if(q->type == FIFO){
+        if(q->rear == NULL){
+            q->front = q->rear = newNode;
+        }
+        else{
+            q->rear->next = newNode;
+            q->rear = newNode;
+        }
+    }
+    else{
+        if(q->rear == NULL){
+            q->front = q->rear = newNode;
+        }
+        else{
+            newNode->next = q->front;
+            q->front = newNode;
+        }
+    }
+}
+
+Agnode_t* dequeue(Queue* q) {
+    if (q->front == NULL) return NULL;
+    
+    QueueNode* temp = q->front;
+    Agnode_t* node = temp->node;
+    q->front = q->front->next;
+    
+    if (q->front == NULL) {
+        q->rear = NULL;
+    }
+    
+    free(temp);
+    return node;
+}
+```
+
+## Management of Graph Nodes
+Since the cgraph library does not allow direct indexing of nodes, I decided to create a mapping that allows me to index all the nodes of the graph, in this way I can perform the necessary comparisons, for example to see if a node has already been visited.
+
+```c
+long total_nodes = (long) agnnodes(g);
+Agnode_t **index_map = malloc(sizeof(Agnode_t*) * total_nodes);
+bool *visited = calloc(total_nodes, sizeof(bool));
+
+long i = 0;
+for (Agnode_t *v = agfstnode(g); v; v = agnxtnode(g, v)) {
+    index_map[i] = v;
+    i++;
+}
+
+// The find_index function allows me to find, given a node, the index of the latter.
+int find_index(Agnode_t **index_map, long total_nodes, Agnode_t *target) {
+    for (long i = 0; i < total_nodes; i++) {
+        if (index_map[i] == target)
+            return i;
+    }
+    return -1;
+}
+```
+
+## Compilation and Testing
+I also created a Makefile to compile efficiently, execute inside the directory the command:
+```bash
+make
+```
+
+Furthermore I created a small bash script that allows me to perform 4 tests on the algorithm:
+- Non-existent file
+- Non-DOT file
+- Empty graph
+- Valid graph
+To launch the script execute the following command inside the directory:
+```bash
+./automated_test.sh 
+```
+
+## Documentation of Used cgraph Functions
+Below I report all the functions used from the cgraph library, with their prototype and operation, the file cgraph.pdf contains the tutorial with practical examples of the functions in question, prototype information can be found [here](https://graphviz.org/pdf/cgraph.3.pdf) and summarized, the statement 'Equivalent to: <function>' indicates how I used it in the program.
+
+```c
+/**
+ * @brief Reads a graph from a file in DOT format
+ * @param fp Pointer to the file to read
+ * @param disc Pointer to the graph descriptor (NULL for simple graphs)
+ * @return Pointer to the read graph, NULL in case of error
+ * Agraph_t *agread(FILE *fp, Agdisc_t *disc); 
+ *
+ * Equivalent to: G = agread(fp, NULL);
+ * 
+ * The function reads the graph from the provided file. The graph name, type 
+ * (directed/undirected) and content (including attributes) depend
+ * on the file content.
+ */
+
+/**
+ * @brief Returns the number of nodes in a graph or subgraph
+ * @param g Pointer to the graph
+ * @return Number of nodes in the graph
+ * int agnnodes(Agraph_t *g);
+ *
+ * Equivalent to: agnnodes(g)
+ */
+
+/**
+ * @brief Closes a graph releasing the associated memory
+ * @param g Pointer to the graph to close
+ * void agclose(Agraph_t *g); 
+ *
+ * Equivalent to: agclose(G)
+ * 
+ * The function deletes the graph and associated data structures, freeing memory.
+ */
+
+/**
+ * @brief Returns the first node in a graph
+ * @param g Pointer to the graph
+ * @return Pointer to the first node, NULL if the graph is empty
+ * Agnode_t *agfstnode(Agraph_t *g);
+ * 
+ * Equivalent to: agfstnode(G)
+ * 
+ * Nodes are returned in order of creation in the root graph.
+ */
+
+/**
+ * @brief Returns the next node in a graph
+ * @param g Pointer to the graph
+ * @param n Pointer to the current node
+ * @return Pointer to the next node, NULL if there are no more
+ * Agnode_t *agnxtnode(Agraph_t *g, Agnode_t *n); 
+ *
+ * Equivalent to: agnxtnode(g, v)
+ */
+
+/**
+ * @brief Returns the first edge incident to a node (for undirected graphs)
+ * @param g Pointer to the graph
+ * @param n Pointer to the node
+ * @return Pointer to the first incident edge, NULL if there are none
+ * Agedge_t *agfstedge(Agraph_t *g, Agnode_t *n); 
+ *
+ * Equivalent to: agfstedge(g, current)
+ */
+
+/**
+ * @brief Returns the next edge incident to a node (for undirected graphs)
+ * @param g Pointer to the graph
+ * @param e Pointer to the current edge
+ * @param n Pointer to the node
+ * @return Pointer to the next incident edge, NULL if there are no more
+ * Agedge_t *agnxtedge(Agraph_t *g, Agedge_t *e, Agnode_t *n); 
+ *
+ * Equivalent to: agnxtedge(g,e,current)
+ */
+
+/**
+ * @brief Returns the origin node of an edge
+ * @param e Pointer to the edge
+ * @return Pointer to the origin node (tail)
+ * Agnode_t *agtail(Agedge_t *e) 
+ *
+ * Equivalent to: agtail(e)
+ */
+
+/**
+ * @brief Returns the destination node of an edge
+ * @param e Pointer to the edge
+ * @return Pointer to the destination node (head)
+ * Agnode_t *aghead(Agedge_t *e); 
+ *
+ * Equivalent to: aghead(e)
+ */
+```
+
+---
+
+## 🇮🇹 Versione Italiana
+
+# Algoritmo per la stima del numero di componenti connesse in un grafo
+
 L'algoritmo affronta il problema della stima del numero di componenti connesse in un grafo.  
 L'obiettivo è avere un algoritmo che opera in tempo sublineare.
 
@@ -139,21 +432,22 @@ Agnode_t* dequeue(Queue* q) {
     return node;
 }
 ```
+
 ## Gestione dei nodi del grafo
 Poiché la libreria cgraph non consente la diretta indicizzazione dei nodi, ho deciso di creare una mappatura che mi consenta di indicizzare tutti i nodi del grafo, in questo modo posso effettuare i confronti necessari, ad esempio per vedere se un nodo è già stato visitato.
 
 ```c
 long total_nodes = (long) agnnodes(g);
-    Agnode_t **index_map = malloc(sizeof(Agnode_t*) * total_nodes);
-    bool *visited = calloc(total_nodes, sizeof(bool));
+Agnode_t **index_map = malloc(sizeof(Agnode_t*) * total_nodes);
+bool *visited = calloc(total_nodes, sizeof(bool));
 
-    long i = 0;
-    for (Agnode_t *v = agfstnode(g); v; v = agnxtnode(g, v)) {
-        index_map[i] = v;
-        i++;
-    }
+long i = 0;
+for (Agnode_t *v = agfstnode(g); v; v = agnxtnode(g, v)) {
+    index_map[i] = v;
+    i++;
+}
 
-La funzione find_index mi permette di trovare, dato un nodo, l'indice di quest'ultimo.
+// La funzione find_index mi permette di trovare, dato un nodo, l'indice di quest'ultimo.
 int find_index(Agnode_t **index_map, long total_nodes, Agnode_t *target) {
     for (long i = 0; i < total_nodes; i++) {
         if (index_map[i] == target)
@@ -178,6 +472,7 @@ Per lanciare lo script eseguire il seguente comando all'interno della directory:
 ```bash
 ./automated_test.sh 
 ```
+
 ## Documentazione delle funzioni cgraph utilizzate
 Di seguito riporto tutte le funzioni utilizzate della libreria cgraph, con il prototipo e il funzionamento di queste, il file cgraph.pdf contiene il tutorial con esempi pratici delle funzioni in questione, le informazioni sui prototipi sono reperibili [qui](https://graphviz.org/pdf/cgraph.3.pdf) e riassunte, la dicitura 'Equivalente a: <funzione>' indica come io l'ho utilizzata nel programma.
 
